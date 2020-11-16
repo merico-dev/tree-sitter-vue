@@ -42,62 +42,62 @@ module.exports = grammar({
 
     element: $ => choice(
       seq(
-        $.start_tag,
+        field('start_tag', $.start_tag),
         repeat($._node),
-        choice($.end_tag, $._implicit_end_tag),
+        field('end_tag', choice($.end_tag, $._implicit_end_tag)),
       ),
-      $.self_closing_tag,
+      field('start_tag', $.self_closing_tag),
     ),
 
     template_element: $ => seq(
-      alias($.template_start_tag, $.start_tag),
+      field('start_tag', alias($.template_start_tag, $.start_tag)),
       repeat($._node),
-      $.end_tag,
+      field('end_tag', $.end_tag),
     ),
 
     script_element: $ => seq(
-      alias($.script_start_tag, $.start_tag),
-      optional($.raw_text),
-      $.end_tag,
+      field('start_tag', alias($.script_start_tag, $.start_tag)),
+      field('raw_text', optional($.raw_text)),
+      field('end_tag', $.end_tag),
     ),
 
     style_element: $ => seq(
-      alias($.style_start_tag, $.start_tag),
-      optional($.raw_text),
-      $.end_tag,
+      field('start_tag', alias($.style_start_tag, $.start_tag)),
+      field('raw_text', optional($.raw_text)),
+      field('end_tag', $.end_tag),
     ),
 
     start_tag: $ => seq(
       "<",
-      alias($._start_tag_name, $.tag_name),
+      field('name', alias($._start_tag_name, $.tag_name)),
       repeat(choice($.attribute, $.directive_attribute)),
       ">",
     ),
 
     template_start_tag: $ => seq(
       "<",
-      alias($._template_start_tag_name, $.tag_name),
+      field('name', alias($._template_start_tag_name, $.tag_name)),
       repeat(choice($.attribute, $.directive_attribute)),
       ">",
     ),
 
     script_start_tag: $ => seq(
       "<",
-      alias($._script_start_tag_name, $.tag_name),
+      field('name', alias($._script_start_tag_name, $.tag_name)),
       repeat(choice($.attribute, $.directive_attribute)),
       ">",
     ),
 
     style_start_tag: $ => seq(
       "<",
-      alias($._style_start_tag_name, $.tag_name),
+      field('name', alias($._style_start_tag_name, $.tag_name)),
       repeat(choice($.attribute, $.directive_attribute)),
       ">",
     ),
 
     self_closing_tag: $ => seq(
       "<",
-      alias($._start_tag_name, $.tag_name),
+      field('name', alias($._start_tag_name, $.tag_name)),
       repeat(choice($.attribute, $.directive_attribute)),
       "/>",
     ),
@@ -115,7 +115,7 @@ module.exports = grammar({
     ),
 
     attribute: $ => seq(
-      $.attribute_name,
+      field('name', $.attribute_name),
       optional(seq(
         "=",
         choice(
@@ -131,8 +131,8 @@ module.exports = grammar({
 
     quoted_attribute_value: $ =>
       choice(
-        seq("'", optional(alias(/[^']+/, $.attribute_value)), "'"),
-        seq('"', optional(alias(/[^"]+/, $.attribute_value)), '"'),
+        seq("'", field('value', optional(alias(/[^']+/, $.attribute_value))), "'"),
+        seq('"', field('value', optional(alias(/[^"]+/, $.attribute_value))), '"'),
       ),
 
     text: $ => choice($._text_fragment, "{{"),
@@ -147,30 +147,37 @@ module.exports = grammar({
       seq(
         choice(
           seq(
-            $.directive_name,
+            field('name', $.directive_name),
             optional(seq(
               token.immediate(prec(1, ":")),
-              choice($.directive_argument, $.directive_dynamic_argument),
+              field('argument', choice($.directive_argument, $.directive_dynamic_argument)),
             )),
           ),
           seq(
-            alias($.directive_shorthand, $.directive_name),
-            choice($.directive_argument, $.directive_dynamic_argument),
+            field('name', alias($.directive_shorthand, $.directive_name)),
+            field('argument', choice($.directive_argument, $.directive_dynamic_argument)),
           ),
         ),
-        optional($.directive_modifiers),
-        optional(seq("=", choice($.attribute_value, $.quoted_attribute_value))),
+        optional(field('modifiers', $.directive_modifiers)),
+        optional(seq("=", field('value', choice($.attribute_value, $.quoted_attribute_value)))),
       ),
+
     directive_name: $ => token(prec(1, /v-[^<>'"=/\s:.]+/)),
+
     directive_shorthand: $ => token(prec(1, choice(":", "@", "#"))),
+
     directive_argument: $ => token.immediate(/[^<>"'/=\s.]+/),
+
     directive_dynamic_argument: $ => seq(
       token.immediate(prec(1, "[")),
       optional($.directive_dynamic_argument_value),
       token.immediate("]"),
     ),
+
     directive_dynamic_argument_value: $ => token.immediate(/[^<>"'/=\s\]]+/),
+
     directive_modifiers: $ => repeat1(seq(token.immediate(prec(1, ".")), $.directive_modifier)),
+
     directive_modifier: $ => token.immediate(/[^<>"'/=\s.]+/),
   },
 });
